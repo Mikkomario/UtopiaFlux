@@ -1,110 +1,129 @@
 package flux_sound;
 
-import genesis_logic.Handled;
-import genesis_logic.LogicalHandler;
+import genesis_event.EventSelector;
+import genesis_event.Handler;
+import genesis_event.HandlerRelay;
+import genesis_event.HandlerType;
+import genesis_event.StrictEventSelector;
+import genesis_util.StateOperator;
 
 /**
  * Soundlistenerhandler informs multiple listeners about sound events of sounds 
  * it listens to
  *
  * @author Mikko Hilpinen.
- *         Created 19.8.2013.
+ * @since 19.8.2013.
  */
-public class SoundListenerHandler extends LogicalHandler implements SoundListener
+public class SoundListenerHandler extends Handler<SoundListener> implements SoundListener
 {
 	// ATTRIBUTES	-----------------------------------------------------
 	
-	// TODO: Update to handlingoperators?
 	private SoundEvent lastevent;
-	private Sound lastsound;
+	private StateOperator listensOperator;
+	private EventSelector<SoundEvent> eventSelector;
 	
 	
 	// CONSTRUCTOR	-----------------------------------------------------
 	
 	/**
-	 * Creates a new soundlistenerhandler and adds it to the given handler (if 
+	 * Creates a new soundlistenerhandler and adds it to the given handlers (if 
 	 * possible)
 	 *
 	 * @param autodeath Will the handler automatically die when it runs out 
 	 * of handleds
-	 * @param superhandler The soundhandler that will handle the handler
+	 * @param superHandlers The handlers that will handle the handler (optional)
 	 */
-	public SoundListenerHandler(boolean autodeath, SoundListenerHandler superhandler)
+	public SoundListenerHandler(boolean autodeath, HandlerRelay superHandlers)
 	{
-		super(autodeath, superhandler);
+		super(autodeath, superHandlers);
 		
-		// Initializes attributes
-		this.lastevent = SoundEvent.START;
-		this.lastsound = null;
+		this.lastevent = null;
+		this.listensOperator = new AnyListensToSoundsOperator();
+		this.eventSelector = new StrictEventSelector<>();
+	}
+	
+	/**
+	 * Creates a new soundListenerHandler. The handler won't be automatically informed about 
+	 * sound events.
+	 * @param autoDeath Will the handler automatically die once it runs out of handleds
+	 */
+	public SoundListenerHandler(boolean autoDeath)
+	{
+		super(autoDeath);
+		
+		this.lastevent = null;
 	}
 	
 	
 	// IMPLEMENTED METHODS	---------------------------------------------
-
-	@Override
-	protected Class<?> getSupportedClass()
-	{
-		return SoundListener.class;
-	}
-
-	@Override
-	public void onSoundStart(Sound source)
-	{
-		informListeners(SoundEvent.START, source);
-	}
-
-	@Override
-	public void onSoundEnd(Sound source)
-	{
-		informListeners(SoundEvent.END, source);
-	}
 	
 	@Override
-	protected boolean handleObject(Handled h)
+	protected boolean handleObject(SoundListener l)
 	{
-		// Informs all the listeners about a new event
-		SoundListener s = (SoundListener) h;
-		
-		if (!s.isActive())
+		// If the listener is not willing to receive the event, skips it
+		if (!l.getListensToSoundEventsOperator().getState() || 
+				!l.getSoundEventSelector().selects(this.lastevent))
 			return true;
 		
-		if (this.lastevent == SoundEvent.START)
-			s.onSoundStart(this.lastsound);
-		else if (this.lastevent == SoundEvent.END)
-			s.onSoundEnd(this.lastsound);
+		l.onSoundEvent(this.lastevent);
 		
 		return true;
 	}
 	
-	
-	// OTHER METHODS	-------------------------------------------------
-	
-	/**
-	 * Adds a new listener to the informed listeners
-	 *
-	 * @param s The listener to be informed
-	 */
-	public void addListener(SoundListener s)
+	@Override
+	public HandlerType getHandlerType()
 	{
-		addHandled(s);
+		return FluxHandlerType.SOUNDLISTENERHANDLER;
 	}
 	
-	private void informListeners(SoundEvent event, Sound source)
+	@Override
+	public void onSoundEvent(flux_sound.SoundEvent e)
 	{
 		// Updates status
-		this.lastevent = event;
-		this.lastsound = source;
+		this.lastevent = e;
 		// Informs listeners
 		handleObjects();
-		// Forgets the sound
-		this.lastsound = null;
+		// Forgets the status
+		this.lastevent = null;
+	}
+
+	@Override
+	public StateOperator getListensToSoundEventsOperator()
+	{
+		return this.listensOperator;
+	}
+
+	@Override
+	public EventSelector<flux_sound.SoundEvent> getSoundEventSelector()
+	{
+		return this.eventSelector;
 	}
 	
 	
-	// ENUMERATIONS	-------------------------------------------------------
+	// SUBCLASSES	-----------------------------
 	
-	private enum SoundEvent
+	private class AnyListensToSoundsOperator extends ForAnyHandledsOperator
 	{
-		START, END;
+		// CONSTRUCTOR	-------------------------
+		
+		public AnyListensToSoundsOperator()
+		{
+			super(true);
+		}
+		
+		
+		// IMPLEMENTED METHODS	-----------------
+
+		@Override
+		protected void changeHandledState(SoundListener s, boolean newState)
+		{
+			s.getListensToSoundEventsOperator().setState(newState);
+		}
+
+		@Override
+		protected boolean getHandledState(SoundListener s)
+		{
+			return s.getListensToSoundEventsOperator().getState();
+		}
 	}
 }

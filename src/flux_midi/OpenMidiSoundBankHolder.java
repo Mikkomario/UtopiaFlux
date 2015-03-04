@@ -2,8 +2,6 @@ package flux_midi;
 
 import java.util.ArrayList;
 
-import arc_bank.OpenBank;
-import arc_resource.Resource;
 import flux_sound.OpenSoundBankHolder;
 import flux_sound.SoundResource;
 

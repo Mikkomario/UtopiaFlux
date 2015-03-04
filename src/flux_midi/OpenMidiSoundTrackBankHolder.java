@@ -1,6 +1,5 @@
 package flux_midi;
 
-import arc_resource.Resource;
 import flux_sound.OpenSoundTrackBankHolder;
 import flux_sound.SoundResource;
 

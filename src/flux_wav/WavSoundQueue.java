@@ -10,7 +10,7 @@ import flux_sound.SoundQueue;
  * the individual sounds can be adjusted.
  *
  * @author Mikko Hilpinen.
- *         Created 7.9.2013.
+ * @since 7.9.2013.
  */
 public class WavSoundQueue extends SoundQueue
 {

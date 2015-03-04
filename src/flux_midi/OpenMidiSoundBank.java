@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import flux_sound.SoundResource;
 import arc_bank.MultiMediaHolder;
-import arc_bank.OpenBank;
 
 /**
  * OpenmidiSoundBank holds a number of midis that are initialized using a 
@@ -14,7 +13,7 @@ import arc_bank.OpenBank;
  * @author Mikko Hilpinen. 
  * @since 10.2.2014
  */
-public class OpenMidiSoundBank extends MidiSoundBank implements OpenBank
+public class OpenMidiSoundBank extends MidiSoundBankOld implements OpenBank
 {
 	// ATTRIBUTES	------------------------------------------------------
 	
@@ -76,12 +75,12 @@ public class OpenMidiSoundBank extends MidiSoundBank implements OpenBank
 	 * @return The MidiSoundBank with the given name or null if no such bank exists 
 	 * or if the bank is not active
 	 */
-	public static MidiSoundBank getMidiSoundBank(String bankname)
+	public static MidiSoundBankOld getMidiSoundBank(String bankname)
 	{
 		OpenBank maybeMidibank = MultiMediaHolder.getBank(SoundResource.MIDI, bankname);
 		
-		if (maybeMidibank instanceof MidiSoundBank)
-			return (MidiSoundBank) maybeMidibank;
+		if (maybeMidibank instanceof MidiSoundBankOld)
+			return (MidiSoundBankOld) maybeMidibank;
 		else
 			return null;
 	}
@@ -95,7 +94,7 @@ public class OpenMidiSoundBank extends MidiSoundBank implements OpenBank
 	 */
 	public static MidiSound getMidiSound(String bankName, String soundName)
 	{
-		MidiSoundBank bank = getMidiSoundBank(bankName);
+		MidiSoundBankOld bank = getMidiSoundBank(bankName);
 		
 		if (bank == null)
 			return null;

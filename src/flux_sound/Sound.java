@@ -1,6 +1,9 @@
 package flux_sound;
 
-import arc_bank.BankObject;
+import flux_sound.SoundEvent.SoundEventType;
+import genesis_event.Handled;
+import genesis_util.StateOperator;
+import genesis_util.StateOperatorListener;
 
 /**
  * Sound is a sound or a music that can be played during the game. Each playable 
@@ -10,14 +13,15 @@ import arc_bank.BankObject;
  * @author Mikko Hilpinen.
  * @since 19.8.2013.
  */
-public abstract class Sound implements BankObject
+public abstract class Sound implements Handled, StateOperatorListener
 {
 	// ATTRIBUTES	------------------------------------------------------
 	
 	private SoundListener specificlistener;
 	private SoundListenerHandler listenerhandler;
 	private String name;
-	private boolean dead, playing;
+	private boolean playing;
+	private StateOperator isDeadOperator;
 	
 	
 	// CONSTRUCTOR	------------------------------------------------------
@@ -31,10 +35,12 @@ public abstract class Sound implements BankObject
 	{
 		// Initializes attributes
 		this.name = name;
-		this.listenerhandler = new SoundListenerHandler(false, null);
+		this.listenerhandler = new SoundListenerHandler(false);
 		this.specificlistener = null;
-		this.dead = false;
 		this.playing = false;
+		this.isDeadOperator = new StateOperator(false, true);
+		
+		this.isDeadOperator.getListenerHandler().add(this);
 	}
 	
 	
@@ -75,58 +81,62 @@ public abstract class Sound implements BankObject
 	// IMPLEMENTED METHODS	----------------------------------------------
 	
 	@Override
-	public void kill()
+	public StateOperator getIsDeadStateOperator()
 	{
-		// Stops the sound and empties the handler
-		stop();
-		this.specificlistener = null;
-		this.listenerhandler.killWithoutKillingHandleds();
-		
-		this.dead = true;
-		
-		//System.out.println("Sound was killed");
+		return this.isDeadOperator;
 	}
 	
 	@Override
-	public boolean isDead()
+	public void onStateChange(StateOperator source, boolean newState)
 	{
-		return this.dead;
+		// When the sound dies, it stops and empties the handler
+		if (source == this.isDeadOperator && newState)
+		{
+			stop();
+			this.specificlistener = null;
+			getListenerHandler().removeAllHandleds();
+			getListenerHandler().getIsDeadStateOperator().setState(true);
+		}
+	}
+	
+	
+	// GETTERS & SETTERS	-----------------------
+	
+	/**
+	 * @return The handler that informs the listners about the sound events created by this 
+	 * sound
+	 */
+	public SoundListenerHandler getListenerHandler()
+	{
+		return this.listenerhandler;
 	}
 	
 	
 	// OTHER METHODS	--------------------------------------------------
 	
 	/**
-	 * Plays through the sound once. Informs the listener about the start 
-	 * and end of the sound. Informs the given specificlistener just about this 
-	 * playthrough of the sound.
+	 * Plays through the sound once. Informs the listener about the sound events 
+	 * created by the sound.
 	 *
 	 * @param specificlistener A specific listener that will be informed about 
 	 * the events caused by this play of the sound only (null if not needed)
 	 */
 	public void play(SoundListener specificlistener)
 	{	
-		//System.out.println("Trying to play a sound");
-		
 		// Only plays sounds if alive
-		if (this.dead)
+		if (getIsDeadStateOperator().getState())
 			return;
 		
 		// If the sound was already playing, stops the former one
-		if (this.playing)
+		if (isPlaying())
 			stop();
 		
 		// Informs the listeners about the event
-		this.specificlistener = specificlistener;
-		if (this.specificlistener != null)
-			this.specificlistener.onSoundStart(this);
-		this.listenerhandler.onSoundStart(this);
+		createSoundEvent(SoundEventType.START);
 		
 		this.playing = true;
 		// Plays the sound
 		playSound();
-		
-		//System.out.println("plays a sound");
 	}
 	
 	/**
@@ -137,27 +147,20 @@ public abstract class Sound implements BankObject
 	 */
 	public void loop(SoundListener specificlistener)
 	{
-		//System.out.println("Trying to loop a sound");
-		
 		// Only plays sounds if alive
-		if (this.dead)
+		if (getIsDeadStateOperator().getState())
 			return;
 		
 		// If the sound was already playing, stops the former one
-		if (this.playing)
+		if (isPlaying())
 			stop();
 		
 		// Informs the listeners about the event
-		this.specificlistener = specificlistener;
-		if (this.specificlistener != null)
-			this.specificlistener.onSoundStart(this);
-		this.listenerhandler.onSoundStart(this);
+		createSoundEvent(SoundEventType.START);
 		
 		this.playing = true;
 		// Plays the sound
 		loopSound();
-		
-		//System.out.println("Loops a sound");
 	}
 	
 	/**
@@ -167,16 +170,14 @@ public abstract class Sound implements BankObject
 	public void stop()
 	{
 		// Only stops sounds if alive and playing
-		if (this.dead || !this.playing)
+		if (getIsDeadStateOperator().getState() || !isPlaying())
 			return;
 		
 		this.playing = false;
 		// Stops the sound
 		stopSound();
 		// Informs the listeners about the event
-		if (this.specificlistener != null)
-			this.specificlistener.onSoundEnd(this);
-		this.listenerhandler.onSoundEnd(this);
+		createSoundEvent(SoundEventType.END);
 	}
 	
 	/**
@@ -185,27 +186,6 @@ public abstract class Sound implements BankObject
 	public boolean isPlaying()
 	{
 		return this.playing;
-	}
-	
-	/**
-	 * Adds a soundlistener to the listeners that are informed when the sound 
-	 * starts or ends
-	 *
-	 * @param s The soundlistener to be informed
-	 */
-	public void addListener(SoundListener s)
-	{
-		this.listenerhandler.addListener(s);
-	}
-	
-	/**
-	 * Removes a soundlistener from the informed listeners
-	 *
-	 * @param s The soundlistener to be removed
-	 */
-	public void removeListener(SoundListener s)
-	{
-		this.listenerhandler.removeHandled(s);
 	}
 	
 	/**
@@ -226,9 +206,7 @@ public abstract class Sound implements BankObject
 		this.playing = false;
 		
 		// Informs the listeners
-		if (this.specificlistener != null)
-			this.specificlistener.onSoundEnd(this);
-		this.listenerhandler.onSoundEnd(this);
+		createSoundEvent(SoundEventType.END);
 	}
 	
 	/**
@@ -244,9 +222,20 @@ public abstract class Sound implements BankObject
 		this.specificlistener = specificlistener;
 		
 		// Informs the listeners
-		if (this.specificlistener != null)
-			this.specificlistener.onSoundStart(this);
-		this.listenerhandler.onSoundStart(this);
+		createSoundEvent(SoundEventType.START);
+	}
+	
+	private void createSoundEvent(SoundEventType eventType)
+	{
+		SoundEvent e = new SoundEvent(this, eventType);
+		informListenerAboutEvent(this.specificlistener, e);
+		informListenerAboutEvent(getListenerHandler(), e);
+	}
+	
+	private static void informListenerAboutEvent(SoundListener l, SoundEvent e)
+	{
+		if (l != null && l.getListensToSoundEventsOperator().getState() && 
+				l.getSoundEventSelector().selects(e))
+			l.onSoundEvent(e);
 	}
 }
-

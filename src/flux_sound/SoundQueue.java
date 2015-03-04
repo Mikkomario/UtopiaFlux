@@ -10,7 +10,7 @@ import arc_bank.BankObject;
  * queue easily even during playing.
  *
  * @author Mikko Hilpinen.
- *         Created 6.9.2013.
+ * @since 6.9.2013.
  */
 public abstract class SoundQueue implements SoundListener, BankObject
 {
