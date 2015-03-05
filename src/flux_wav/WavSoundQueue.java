@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import flux_sound.Sound;
-import flux_sound.SoundQueue;
+import flux_sound.AbstractSoundQueue;
 
 /**
  * WavSoundQueue is a soundqueue that plays wavsounds. The volume and pan of 
@@ -13,7 +13,7 @@ import flux_sound.SoundQueue;
  * @author Mikko Hilpinen.
  * @since 7.9.2013.
  */
-public class WavSoundQueue extends SoundQueue
+public class WavSoundQueue extends AbstractSoundQueue
 {
 	// ATTRIBUTES	-----------------------------------------------------
 	

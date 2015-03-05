@@ -17,7 +17,7 @@ import java.util.List;
  * @author Mikko Hilpinen.
  * @since 6.9.2013.
  */
-public abstract class SoundQueue implements SoundListener, StateOperatorListener
+public abstract class AbstractSoundQueue implements SoundListener, StateOperatorListener
 {
 	// ATTRIBUTES	------------------------------------------------------
 	
@@ -35,7 +35,7 @@ public abstract class SoundQueue implements SoundListener, StateOperatorListener
 	 * @param autodeath Should the queue die when it has played all the 
 	 * sounds in it
 	 */
-	public SoundQueue(boolean autodeath)
+	public AbstractSoundQueue(boolean autodeath)
 	{
 		// Initializes attributes
 		this.isDeadOperator = new LatchStateOperator(false);
