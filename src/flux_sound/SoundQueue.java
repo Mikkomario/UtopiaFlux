@@ -1,8 +1,13 @@
 package flux_sound;
 
-import java.util.LinkedList;
+import flux_sound.SoundEvent.SoundEventType;
+import genesis_event.EventSelector;
+import genesis_util.LatchStateOperator;
+import genesis_util.StateOperator;
+import genesis_util.StateOperatorListener;
 
-import arc_bank.BankObject;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * SoundQueues play a number of sounds in a succession, starting the 
@@ -12,12 +17,14 @@ import arc_bank.BankObject;
  * @author Mikko Hilpinen.
  * @since 6.9.2013.
  */
-public abstract class SoundQueue implements SoundListener, BankObject
+public abstract class SoundQueue implements SoundListener, StateOperatorListener
 {
 	// ATTRIBUTES	------------------------------------------------------
 	
-	private LinkedList<Sound> sounds;
-	private boolean dead, diesatend, playing;
+	private List<Sound> sounds;
+	private boolean diesatend, playing;
+	private StateOperator isDeadOperator, listensToSoundsOperator;
+	private EventSelector<SoundEvent> eventSelector;
 	
 	
 	// CONSTRUCTOR	------------------------------------------------------
@@ -31,18 +38,23 @@ public abstract class SoundQueue implements SoundListener, BankObject
 	public SoundQueue(boolean autodeath)
 	{
 		// Initializes attributes
-		this.sounds = new LinkedList<Sound>();
-		this.dead = false;
+		this.isDeadOperator = new LatchStateOperator(false);
+		this.listensToSoundsOperator = new StateOperator(true, false);
+		this.eventSelector = SoundEvent.createEventTypeSelector(SoundEventType.END);
+		
+		this.sounds = new LinkedList<>();
 		this.diesatend = autodeath;
 		this.playing = false;
+		
+		getIsDeadStateOperator().getListenerHandler().add(this);
 	}
 	
 	
 	// ABSTRACT METHODS	-------------------------------------------------
 	
 	/**
-	 * here the subclass is supposed to play te given sound using the settings 
-	 * it seems neccessary. The SoundQueue should be added as the specific 
+	 * here the subclass is supposed to play the given sound using the settings 
+	 * it deems necessary. The SoundQueue should be added as the specific 
 	 * listener to the sound
 	 *
 	 * @param sound The sound that needs to be played
@@ -53,68 +65,64 @@ public abstract class SoundQueue implements SoundListener, BankObject
 	// IMPLEMENTED METHODS	---------------------------------------------
 
 	@Override
-	public boolean isActive()
+	public void onStateChange(StateOperator source, boolean newState)
 	{
-		// The queue is active as long as it lives (it needs to react to the 
-		// sound events even when inactivated)
-		return isDead();
+		if (source == getIsDeadStateOperator() && newState)
+		{
+			// Clears the sound list before dying
+			this.playing = false;
+			this.sounds.clear();
+		}
+	}
+	
+	@Override
+	public StateOperator getIsDeadStateOperator()
+	{
+		return this.isDeadOperator;
 	}
 
 	@Override
-	public void activate()
-	{
-		// The queue is always active
-	}
-
-	@Override
-	public void inactivate()
-	{
-		// The queue is always active
-	}
-
-	@Override
-	public boolean isDead()
-	{
-		return this.dead;
-	}
-
-	@Override
-	public void kill()
-	{
-		this.dead = true;
-		
-		// Also clears the sound list
-		//this.sounds = null;
-		this.sounds.clear();
-	}
-
-	@Override
-	public void onSoundStart(Sound source)
-	{
-		// Does nothing
-	}
-
-	@Override
-	public void onSoundEnd(Sound source)
+	public void onSoundEvent(SoundEvent e)
 	{
 		// Removes the old sound from the queue
-		if (this.sounds.size() > 0)
-			this.sounds.removeFirst();
+		if (!this.sounds.isEmpty())
+			this.sounds.remove(0);
 		
-		// Checks if there are any more sounds to play
-		if (this.sounds.size() == 0)
+		// If there aren't more sounds to play
+		if (this.sounds.isEmpty())
 		{
 			// Dies if autodeath is on
 			if (this.diesatend)
-				kill();
+				getIsDeadStateOperator().setState(true);
 			
 			this.playing = false;
-			return;
 		}
-		
-		// Plays the next sound (if still playing)
-		if (this.playing)
-			playSound(this.sounds.getFirst());
+		// Plays the next sound (if still able)
+		else if (isPlaying())
+			playSound(this.sounds.get(0));
+	}
+
+	@Override
+	public StateOperator getListensToSoundEventsOperator()
+	{
+		return this.listensToSoundsOperator;
+	}
+
+	@Override
+	public EventSelector<SoundEvent> getSoundEventSelector()
+	{
+		return this.eventSelector;
+	}
+	
+	
+	// GETTERS & SETTERS	---------------------
+	
+	/**
+	 * @return Whether the que is currently playing a sound
+	 */
+	public boolean isPlaying()
+	{
+		return this.playing;
 	}
 	
 	
@@ -126,24 +134,23 @@ public abstract class SoundQueue implements SoundListener, BankObject
 	public void play()
 	{
 		// Plays through the sounds (if there are any and if not already playing)
-		if (isDead() || this.playing || this.sounds.size() == 0)
+		if (getIsDeadStateOperator().getState() || isPlaying() || this.sounds.isEmpty())
 			return;
 		this.playing = true;
-		playSound(this.sounds.getFirst());
+		playSound(this.sounds.get(0));
 	}
 	
 	/**
 	 * Stops the current sound from playing. The queue can be restarted with 
 	 * play method. If a permanent stop is needed, it is adviced to use the 
-	 * kill method insted.
+	 * isDeadStateOperator method insted.
 	 * 
 	 * @see #play()
-	 * @see #kill()
 	 */
 	public void stop()
 	{
 		this.playing = false;
-		this.sounds.getFirst().stop();
+		this.sounds.get(0).stop();
 	}
 	
 	/**
@@ -171,9 +178,9 @@ public abstract class SoundQueue implements SoundListener, BankObject
 		this.sounds.add(sound);
 		
 		// Plays the sound if needed & not playing another sound
-		if (playiffree && !this.playing)
+		if (playiffree && !isPlaying())
 		{
-			playSound(this.sounds.getFirst());
+			playSound(this.sounds.get(0));
 			this.playing = true;
 		}
 	}

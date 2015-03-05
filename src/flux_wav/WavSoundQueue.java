@@ -1,6 +1,7 @@
 package flux_wav;
 
 import java.util.LinkedList;
+import java.util.List;
 
 import flux_sound.Sound;
 import flux_sound.SoundQueue;
@@ -16,7 +17,7 @@ public class WavSoundQueue extends SoundQueue
 {
 	// ATTRIBUTES	-----------------------------------------------------
 	
-	private LinkedList<WavSoundInformation> soundinformations;
+	private List<WavSoundInformation> soundinformations;
 	
 	
 	// CONSTRUCTOR	-----------------------------------------------------
@@ -32,7 +33,7 @@ public class WavSoundQueue extends SoundQueue
 		super(autodeath);
 		
 		// Initializes attributes
-		this.soundinformations = new LinkedList<WavSoundInformation>();
+		this.soundinformations = new LinkedList<>();
 	}
 	
 	
@@ -49,11 +50,10 @@ public class WavSoundQueue extends SoundQueue
 			return;
 		}
 		// Plays a sound with the right volume and pan
-		WavSoundInformation information = this.soundinformations.getFirst();
-		((WavSound) sound).play(information.getVolume(), information.getPan(), 
-				this);
+		WavSoundInformation information = this.soundinformations.get(0);
+		((WavSound) sound).play(information.getVolume(), information.getPan(), this);
 		// Updates the sound information list
-		this.soundinformations.removeFirst();
+		this.soundinformations.remove(0);
 	}
 	
 	
@@ -82,7 +82,7 @@ public class WavSoundQueue extends SoundQueue
 	
 	// SUBCLASSES	-----------------------------------------------------
 	
-	private class WavSoundInformation
+	private static class WavSoundInformation
 	{
 		// ATTRIBUTES	-------------------------------------------------
 		

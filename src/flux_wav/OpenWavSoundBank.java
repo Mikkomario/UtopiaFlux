@@ -13,7 +13,7 @@ import arc_bank.OpenBank;
  * @author Mikko Hilpinen.
  * @since 7.9.2013.
  */
-public class OpenWavSoundBank extends WavSoundBank implements OpenBank
+public class OpenWavSoundBank extends WavSoundBankOld implements OpenBank
 {
 	// ATTRIBUTES	-----------------------------------------------------
 	
@@ -90,12 +90,12 @@ public class OpenWavSoundBank extends WavSoundBank implements OpenBank
 	 * @return The WavSoundBank with the given name or null if no such bank exists 
 	 * or if the bank is not active
 	 */
-	public static WavSoundBank getWavSoundBank(String bankname)
+	public static WavSoundBankOld getWavSoundBank(String bankname)
 	{
 		OpenBank maybewavbank = MultiMediaHolder.getBank(SoundResource.WAV, bankname);
 		
-		if (maybewavbank instanceof WavSoundBank)
-			return (WavSoundBank) maybewavbank;
+		if (maybewavbank instanceof WavSoundBankOld)
+			return (WavSoundBankOld) maybewavbank;
 		else
 			return null;
 	}
@@ -109,7 +109,7 @@ public class OpenWavSoundBank extends WavSoundBank implements OpenBank
 	 */
 	public static WavSound getWavSound(String bankName, String soundName)
 	{
-		WavSoundBank bank = getWavSoundBank(bankName);
+		WavSoundBankOld bank = getWavSoundBank(bankName);
 		
 		if (bank == null)
 			return null;

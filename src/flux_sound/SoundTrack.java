@@ -1,5 +1,7 @@
 package flux_sound;
 
+import arc_bank.Bank;
+
 /**
  * SoundTrack is a class that plays multiple sounds in order, forming a 
  * track.
@@ -13,7 +15,7 @@ public class SoundTrack extends AbstractSoundTrack
 	
 	private String[] soundnames;
 	private int[] loopcounts;
-	private SoundBank soundbank;
+	private Bank<? extends Sound> soundbank;
 	
 	
 	// CONSTRUCTROR	------------------------------------------------------
@@ -32,8 +34,8 @@ public class SoundTrack extends AbstractSoundTrack
 	 * in the track
 	 * @param name The name of the track
 	 */
-	public SoundTrack(String[] soundnames, int[] loopcounts, 
-			SoundBank soundbank, String name)
+	public SoundTrack(String[] soundnames, int[] loopcounts, Bank<? extends Sound> soundbank, 
+			String name)
 	{
 		super(name);
 		
@@ -50,7 +52,7 @@ public class SoundTrack extends AbstractSoundTrack
 	protected Sound playPhase(int index)
 	{
 		// Plays a sound from the bank
-		Sound newphase = this.soundbank.getSound(this.soundnames[index]);
+		Sound newphase = this.soundbank.get(this.soundnames[index]);
 		newphase.play(this);
 		return newphase;
 	}
@@ -74,20 +76,20 @@ public class SoundTrack extends AbstractSoundTrack
 	// GETTERS & SETTERS	---------------------------------------------
 	
 	/**
-	 * Changes the soundbank used in the track. This can be done in the midle 
+	 * Changes the soundbank used in the track. This can be done in the middle 
 	 * of playing a track and the change will take place once the current sound 
 	 * stops
 	 *
 	 * @param bank The new soundbank to be used
 	 */
-	public void setSoundBank(SoundBank bank)
+	public void setSoundBank(Bank<? extends Sound> bank)
 	{
 		this.soundbank = bank;
 	}
 	
 	/**
-	 * Changes the sounds used in the track. This can be done in the midle 
-	 * of playing a track and the change will take place once the current sound 
+	 * Changes the sounds used in the track. This can be done in the middle 
+	 * of playing the track and the change will take place once the current sound 
 	 * stops
 	 *
 	 * @param soundnames The new sound names to be used
@@ -98,7 +100,7 @@ public class SoundTrack extends AbstractSoundTrack
 	}
 	
 	/**
-	 * Changes the loopcounts used in the track. This can be done in the midle 
+	 * Changes the loopcounts used in the track. This can be done in the middle 
 	 * of playing a track and the change will take place once the current sound 
 	 * stops.
 	 * (0 means that the music is played once, a negative number means that 

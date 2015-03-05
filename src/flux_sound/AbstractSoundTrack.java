@@ -1,11 +1,15 @@
 package flux_sound;
 
+import flux_sound.SoundEvent.SoundEventType;
+import genesis_event.EventSelector;
+import genesis_util.StateOperator;
+
 /**
  * Abstractsoundtrack provides the necessary methods for the soundtracks 
  * so they can easily play custom tracks.
  *
  * @author Mikko Hilpinen.
- *         Created 25.8.2013.
+ * @since 25.8.2013.
  */
 public abstract class AbstractSoundTrack extends Sound implements SoundListener
 {
@@ -16,8 +20,10 @@ public abstract class AbstractSoundTrack extends Sound implements SoundListener
 	private boolean paused, delayed, loops;
 	private int releasespending;
 	 // The index to which the next jump will lead. -1 if the track is 
-	// supposed to traverse at default
+	// supposed to traverse by default
 	private int nextjumpindex;
+	private StateOperator listensOperator;
+	private EventSelector<SoundEvent> eventSelector;
 	
 	
 	// CONSTRUCTROR	------------------------------------------------------
@@ -32,6 +38,8 @@ public abstract class AbstractSoundTrack extends Sound implements SoundListener
 		super(name);
 		
 		// Initializes attributes
+		this.listensOperator = new StateOperator(true, false);
+		this.eventSelector = SoundEvent.createEventTypeSelector(SoundEventType.END);
 		this.currentindex = 0;
 		this.currentloopcount = 0;
 		this.currentsound = null;
@@ -51,7 +59,7 @@ public abstract class AbstractSoundTrack extends Sound implements SoundListener
 	 * affect the playing of the sound as well and it should be done in this 
 	 * method.
 	 *
-	 * @param index The index of the phase played
+	 * @param index The index of the phase that will be played
 	 * @return The sound that was just played
 	 * @see flux_sound.Sound#play(SoundListener)
 	 */
@@ -76,45 +84,29 @@ public abstract class AbstractSoundTrack extends Sound implements SoundListener
 	// IMPLEMENTED METHODS	---------------------------------------------
 	
 	@Override
-	public boolean isActive()
-	{
-		// The track is always active so it doesn't break (inactivating is done 
-		// by pausing)
-		return true;
-	}
-	
-	@Override
-	public void activate()
-	{
-		// The track is always active
-	}
-	
-	@Override
-	public void inactivate()
-	{
-		// The track is always active
-	}
-	
-	@Override
-	public void onSoundStart(Sound source)
-	{
-		// Does nothing
-	}
-	
-	@Override
-	public void onSoundEnd(Sound source)
+	public void onSoundEvent(SoundEvent e)
 	{
 		// If the sound was stopped, doesn't do anything
 		if (!isPlaying())
 			return;
+		
 		// Plays the next sound (if not paused, in which case delays the sound)
 		if (this.paused)
-		{
 			this.delayed = true;
-			//System.out.println("Delays");
-		}
 		else
 			playnextsound();
+	}
+
+	@Override
+	public StateOperator getListensToSoundEventsOperator()
+	{
+		return this.listensOperator;
+	}
+
+	@Override
+	public EventSelector<SoundEvent> getSoundEventSelector()
+	{
+		return this.eventSelector;
 	}
 	
 	/**
@@ -163,10 +155,6 @@ public abstract class AbstractSoundTrack extends Sound implements SoundListener
 	@Override
 	protected void playSound()
 	{
-		// Doesn't work if the track was killed
-		if (isDead())
-			return;
-		
 		// Updates information
 		this.currentindex = 0;
 		this.currentloopcount = getLoopCount(this.currentindex);
@@ -242,8 +230,6 @@ public abstract class AbstractSoundTrack extends Sound implements SoundListener
 		// Checks if the track should jump to a specific index
 		if (this.nextjumpindex >= 0)
 		{
-			//System.out.println("Forced track jump");
-			
 			// Gathers information
 			this.currentindex = this.nextjumpindex;
 			this.currentloopcount = getLoopCount(this.currentindex);

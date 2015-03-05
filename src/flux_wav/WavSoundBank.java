@@ -1,52 +1,140 @@
 package flux_wav;
 
-import flux_sound.SoundBank;
+import arc_bank.Bank;
+import arc_bank.BankBank;
+import arc_bank.BankBankInitializer;
+import arc_bank.BankObjectConstructor;
+import arc_bank.MultiMediaHolder;
+import arc_bank.ResourceInitializationException;
+import flux_wav.WavSound;
+import flux_sound.SoundResourceType;
 
 /**
- * A wavsoundbank holds numerous wavsounds and gives them for the other objects 
- * to use
- *
- * @author Mikko Hilpinen.
- * @since 17.8.2013.
+ * This is a static collection of wavSounds and wavSoundBanks
+ * @author Mikko Hilpinen
+ * @since 5.3.2015
  */
-public abstract class WavSoundBank extends SoundBank
+public class WavSoundBank
 {
-	// IMPLEMENTED METHODS	--------------------------------------------
+	// CONSTRUCTOR	-------------------------
 	
-	@Override
-	protected Class<?> getSupportedClass()
+	private WavSoundBank()
 	{
-		return WavSound.class;
+		// The interface is static
+	}
+
+	
+	// OTHER METHODS	--------------------
+	
+	/**
+	 * Initializes the wavSound resources. This should be called before the gamePhases have 
+	 * been initialized.
+	 * @param fileName The name of the file that contains wavSound data ("data/" automatically 
+	 * included). The file should have the following format:<br>
+	 * &bankName1<br>
+	 * soundName1#fileName#volumeAdjustment (optional, default = 0)#
+	 * panAdjustment (optional, default = 0)<br>
+	 * soundName2#...<br>
+	 * ...<br>
+	 * &bankName2<br>
+	 * ...<br>
+	 */
+	public static void initializeWavSoundResources(String fileName)
+	{
+		MultiMediaHolder.initializeResourceDatabase(createWavSoundBankBank(fileName));
+	}
+	
+	/**
+	 * Creates a new bank system that handles all the wavSounds introduced in the given file
+	 * @param fileName The name of the file that contains wavSound data ("data/" automatically 
+	 * included). The file should have the following format:<br>
+	 * &bankName1<br>
+	 * soundName1#fileName#volumeAdjustment (optional, default = 0)#
+	 * panAdjustment (optional, default = 0)<br>
+	 * soundName2#...<br>
+	 * ...<br>
+	 * &bankName2<br>
+	 * ...<br>
+	 * 
+	 * @return A new Bank system containing all the introduced banks
+	 */
+	public static BankBank<WavSound> createWavSoundBankBank(String fileName)
+	{
+		return new BankBank<>(new BankBankInitializer<>(fileName, 
+				new WavSoundBankConstructor(), new WavSoundConstructor()), 
+				SoundResourceType.WAV);
+	}
+	
+	/**
+	 * Finds and returns a wavBank with the given name. The bank must be active in order 
+	 * for this to work.
+	 * @param bankName The name of the wavBank
+	 * @return A wavBank with the given name
+	 */
+	@SuppressWarnings("unchecked")
+	public static Bank<WavSound> getWavSoundBank(String bankName)
+	{
+		return (Bank<WavSound>) MultiMediaHolder.getBank(SoundResourceType.WAV, bankName);
+	}
+	
+	/**
+	 * Finds and returns a wavSound from the given wavBank. The bank must be active.
+	 * @param bankName The name of the bank that contains the sound
+	 * @param soundName The name of the sound in the bank
+	 * @return A sound with the given name from the given bank
+	 */
+	public static WavSound getSound(String bankName, String soundName)
+	{
+		return getWavSoundBank(bankName).get(soundName);
 	}
 	
 	
-	// OTHER METHODS ---------------------------------------------------
-
-	/**
-	 * Creates and puts a sound to the bank
-	 * 
-	 * @param filename The name of the wav-file (data/ included automatically)
-	 * @param soundname The name of the sound in the bank
-	 * @param defvolume How many desibels the volume is adjusted by default
-	 * @param defpan How much the sound is panned by default [-1 (left speaker 
-	 * only, 1 (right speaker only)]
-	 */
-	protected void createSound(String filename, String soundname, float defvolume, 
-			float defpan)
+	// SUBCLASSES	------------------------
+	
+	private static class WavSoundBankConstructor implements BankObjectConstructor<Bank<WavSound>>
 	{
-		WavSound newsound = new WavSound(filename, soundname, defvolume, defpan);
-		addObject(newsound, soundname);
+		@Override
+		public Bank<WavSound> construct(String line, Bank<Bank<WavSound>> bank)
+		{
+			// The line contains the name of the bank
+			Bank<WavSound> newBank = new Bank<>();
+			bank.put(line, newBank);
+			return newBank;
+		}
 	}
-
-	/**
-	 * Returns a sound from the bank.
-	 * 
-	 * @param soundname The name of the sound in the bank
-	 * @return The sound with the given name or null if no such sound was found
-	 */
-	@Override
-	public WavSound getSound(String soundname)
+	
+	private static class WavSoundConstructor implements BankObjectConstructor<WavSound>
 	{
-		return (WavSound) getObject(soundname);
+		@Override
+		public WavSound construct(String line, Bank<WavSound> bank)
+		{
+			// The line has the following format: soundName#fileName#
+			// volumeAdjustment (optional)#pan (optional)
+			String[] arguments = line.split("#");
+			
+			if (arguments.length < 2)
+				throw new ResourceInitializationException("Can't construct a wavSound from " + 
+						line);
+			
+			float volume = 0, pan = 0;
+			if (arguments.length > 2)
+			{
+				try
+				{
+					volume = Float.parseFloat(arguments[2]);
+					if (arguments.length > 3)
+						pan = Float.parseFloat(arguments[3]);
+				}
+				catch (NumberFormatException e)
+				{
+					throw new ResourceInitializationException("Can't parse line " + line);
+				}
+			}
+			
+			WavSound newSound = new WavSound(arguments[1], arguments[0], volume, pan);
+			bank.put(arguments[0], newSound);
+			
+			return newSound;
+		}	
 	}
 }
