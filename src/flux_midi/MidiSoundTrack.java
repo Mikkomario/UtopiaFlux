@@ -77,14 +77,14 @@ public class MidiSoundTrack extends AbstractSoundTrack
 	// SUBCLASSES	-----------------------------------------------------
 	
 	/**
-	 * LoopPointInformation holds the information about midiSound's loop's 
+	 * LoopPointInformation holds the information about a midiSound's loop's 
 	 * start- and endpoints.
 	 *
 	 * @author Mikko Hilpinen.
-	 *         Created 23.8.2013.
+	 * @since 23.8.2013
 	 * @see flux_midi.MidiSoundTrack
 	 */
-	public class LoopPointInformation
+	public static class LoopPointInformation
 	{
 		// ATTRIBUTES	--------------------------------------------------
 		

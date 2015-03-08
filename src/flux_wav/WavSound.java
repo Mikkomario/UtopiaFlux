@@ -65,13 +65,13 @@ public class WavSound extends Sound
 	// IMPLEMENTED METHODS	--------------------------------------------
 	
 	@Override
-	public void playSound()
+	protected void playSound()
 	{
 		startsound(this.defaultvolume, this.defaultpan, false);
 	}
 	
 	@Override
-	public void loopSound()
+	protected void loopSound()
 	{
 		startsound(this.defaultvolume, this.defaultpan, true);
 	}
@@ -80,7 +80,7 @@ public class WavSound extends Sound
 	 * Stops all instances of the sound from playing
 	 */
 	@Override
-	public void stopSound()
+	protected void stopSound()
 	{
 		// Stops all of the sounds playing
 		Iterator<WavPlayer> i = this.players.iterator();
@@ -119,6 +119,7 @@ public class WavSound extends Sound
 	public boolean isPlaying()
 	{
 		// Paused sounds are also counted as playing
+		// TODO: Test if this causes problems
 		return this.players.isEmpty();
 	}
 	
@@ -127,8 +128,6 @@ public class WavSound extends Sound
 	
 	private void startsound(float volume, float pan, boolean loops)
 	{
-		//System.out.println("Playing a sound using pan: " + pan);
-		
 		WavPlayer newplayer = new WavPlayer(pan, volume, loops);
 		newplayer.start();
 		this.players.add(newplayer);
@@ -144,6 +143,8 @@ public class WavSound extends Sound
 	 */
 	public void play(float volume, float pan, SoundListener specificlistener)
 	{
+		// TODO: Use double instead of float
+		
 		startsound(this.defaultvolume + volume, pan, false);
 		informSoundStart(specificlistener);
 	}
@@ -228,7 +229,7 @@ public class WavSound extends Sound
 	/**
 	 * WavPlayer loads and plays wav files with the given settings
 	 * 
-	 * @author http://www.anyexample.com/programming/java/java_play_wav_sound_file.xml
+	 * @author http://www.anyexample.com/programming/java/java_play_wav_sound_file.xml<br>
 	 * Modified by: Mikko Hilpinen
 	 */
 	private class WavPlayer extends Thread
@@ -279,12 +280,10 @@ public class WavSound extends Sound
 	        	// TODO: WHY U NO READ IN STEREO FORMAT?!?
 	        	audioInputStream = AudioSystem.getAudioInputStream(
 	        			WavSound.this.soundfile);
-	        			//this.getClass().getResourceAsStream(WavSound.this.filename));
 	        }
 	        catch (UnsupportedAudioFileException e1)
 	        {
-	        	System.err.println("Audiofile " + //WavSound.this.filename + 
-	        			" not supported!");
+	        	System.err.println("Audiofile not supported!");
 	            e1.printStackTrace();
 	            return;
 	        }
@@ -296,7 +295,7 @@ public class WavSound extends Sound
 	        } 
 	        catch (NullPointerException npe)
 	        {
-	        	System.err.println("Could not find the file " /*+ WavSound.this.filename*/);
+	        	System.err.println("Could not find the wavSound file.");
 	        	npe.printStackTrace();
 	        	return;
 	        }
@@ -305,8 +304,6 @@ public class WavSound extends Sound
 	        AudioFormat format = audioInputStream.getFormat();
 	        SourceDataLine auline = null;
 	        DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
-	        
-	        //System.out.println(format);
 	 
 	        try
 	        { 
@@ -332,7 +329,7 @@ public class WavSound extends Sound
 	        // Tries to set the correct pan (if needed)
 	        if (this.pan != 0 && auline.isControlSupported(FloatControl.Type.PAN))
 	        { 
-	        	// TODO: Pan is nor supported?
+	        	// TODO: Pan is not supported?
 	        	
 	            FloatControl pancontrol = (FloatControl) auline.getControl(
 	            		FloatControl.Type.PAN);
@@ -341,7 +338,7 @@ public class WavSound extends Sound
 	     	// Tries to set the correct pan #2 (if needed)
 	        if (this.pan != 0 && auline.isControlSupported(FloatControl.Type.BALANCE))
 	        { 
-	        	// TODO: Pan is nor supported?
+	        	// TODO: Pan is not supported?
 	        	
 	            FloatControl pancontrol = (FloatControl) auline.getControl(
 	            		FloatControl.Type.BALANCE);

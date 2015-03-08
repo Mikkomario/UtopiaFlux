@@ -52,6 +52,8 @@ public class SoundListenerHandler extends Handler<SoundListener> implements Soun
 		super(autoDeath);
 		
 		this.lastevent = null;
+		this.listensOperator = new AnyListensToSoundsOperator();
+		this.eventSelector = new StrictEventSelector<>();
 	}
 	
 	

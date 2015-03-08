@@ -1,0 +1,4 @@
+* This is a resource list of all the sounds used in the tests
+
+&test
+test#testSound.wav
