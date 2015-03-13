@@ -3,12 +3,12 @@ package flux_test;
 import arc_bank.GamePhaseBank;
 import arc_resource.ResourceActivator;
 import flux_wav.WavSoundBank;
-import genesis_event.AdvancedMouseEvent;
-import genesis_event.AdvancedMouseEvent.MouseButton;
-import genesis_event.AdvancedMouseEvent.MouseButtonEventType;
-import genesis_event.AdvancedMouseListener;
 import genesis_event.EventSelector;
 import genesis_event.HandlerRelay;
+import genesis_event.MouseEvent;
+import genesis_event.MouseEvent.MouseButton;
+import genesis_event.MouseEvent.MouseButtonEventType;
+import genesis_event.MouseListener;
 import genesis_event.StrictEventSelector;
 import genesis_util.LatchStateOperator;
 import genesis_util.StateOperator;
@@ -59,12 +59,12 @@ public class WavSoundTest
 	
 	// SUBCLASSES	------------------------
 	
-	private static class TestMusicPlayer implements AdvancedMouseListener
+	private static class TestMusicPlayer implements MouseListener
 	{
 		// ATTRIBUTES	--------------------
 		
 		private StateOperator isDeadOperator, listensMouseOperator;
-		private EventSelector<AdvancedMouseEvent> selector;
+		private EventSelector<MouseEvent> selector;
 		private Vector2D screenDimensions;
 		
 		
@@ -81,7 +81,7 @@ public class WavSoundTest
 			this.listensMouseOperator = new StateOperator(true, true);
 			this.screenDimensions = screenDimensions;
 			
-			StrictEventSelector<AdvancedMouseEvent, AdvancedMouseEvent.Feature> s = 
+			StrictEventSelector<MouseEvent, MouseEvent.Feature> s = 
 					new StrictEventSelector<>();
 			s.addRequiredFeature(MouseButton.LEFT);
 			s.addRequiredFeature(MouseButtonEventType.PRESSED);
@@ -106,7 +106,7 @@ public class WavSoundTest
 		}
 
 		@Override
-		public EventSelector<AdvancedMouseEvent> getMouseEventSelector()
+		public EventSelector<MouseEvent> getMouseEventSelector()
 		{
 			return this.selector;
 		}
@@ -118,14 +118,14 @@ public class WavSoundTest
 		}
 
 		@Override
-		public void onMouseEvent(AdvancedMouseEvent event)
+		public void onMouseEvent(MouseEvent event)
 		{
 			// Plays a wavSound with specific settings
 			Vector2D relativeCoordinates = 
 					event.getPosition().dividedBy(this.screenDimensions);
 			
-			float volume = (float) (relativeCoordinates.getSecond() - 0.5) * -60;
-			float pan = (float) relativeCoordinates.getFirst() * 2 - 1;
+			double volume = 6 + (relativeCoordinates.getSecond()) * -60;
+			double pan = relativeCoordinates.getFirst() * 2 - 1;
 			
 			System.out.println("Playing a sound with volume " + volume + " and pan " + pan);
 			

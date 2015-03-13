@@ -24,6 +24,23 @@ import flux_sound.SoundListener;
  */
 public class MidiSound extends Sound implements MetaEventListener
 {
+	/* Volume control
+	 * 
+	Sequencer sequencer = MidiSystem.getSequencer();
+    sequencer.open();
+    if (sequencer instanceof Synthesizer) {
+      Synthesizer synthesizer = (Synthesizer) sequencer;
+      MidiChannel[] channels = synthesizer.getChannels();
+
+      // gain is a value between 0 and 1 (loudest)
+      double gain = 0.9D;
+      for (int i = 0; i < channels.length; i++) {
+        channels[i].controlChange(7, (int) (gain * 127.0));
+      }
+    }
+	 * 
+	 */
+	
 	// ATTRIBUTES ---------------------------------------------------------
 
 	private String fileName;

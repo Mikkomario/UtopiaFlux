@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -30,10 +31,10 @@ public class WavSound extends Sound
 {
 	// ATTRIBUTES	-----------------------------------------------------
 	
-	private LinkedList<WavPlayer> players;
+	private List<WavPlayer> players;
 	//private String filename;
 	private File soundfile;
-	private float defaultvolume, defaultpan;
+	private double defaultvolume, defaultpan;
 	
 	
 	// CONSTRUCTOR	----------------------------------------------------
@@ -48,8 +49,7 @@ public class WavSound extends Sound
 	 * @param defaultvolume How many desibels the volume is adjusted by default
 	 * @param defaultpan How much pan is added by default [-1, 1]
 	 */
-	public WavSound(String filename, String name, float defaultvolume, 
-			float defaultpan)
+	public WavSound(String filename, String name, double defaultvolume, double defaultpan)
 	{
 		super(name);
 		
@@ -115,18 +115,10 @@ public class WavSound extends Sound
 			i.next().unpause();
 	}
 	
-	@Override
-	public boolean isPlaying()
-	{
-		// Paused sounds are also counted as playing
-		// TODO: Test if this causes problems
-		return this.players.isEmpty();
-	}
-	
 	
 	// OTHER METHODS	------------------------------------------------
 	
-	private void startsound(float volume, float pan, boolean loops)
+	private void startsound(double volume, double pan, boolean loops)
 	{
 		WavPlayer newplayer = new WavPlayer(pan, volume, loops);
 		newplayer.start();
@@ -141,10 +133,8 @@ public class WavSound extends Sound
 	 * @param specificlistener A listener that listens to only this instance of 
 	 * the sound (null if no listener is needed)
 	 */
-	public void play(float volume, float pan, SoundListener specificlistener)
+	public void play(double volume, double pan, SoundListener specificlistener)
 	{
-		// TODO: Use double instead of float
-		
 		startsound(this.defaultvolume + volume, pan, false);
 		informSoundStart(specificlistener);
 	}
@@ -158,9 +148,9 @@ public class WavSound extends Sound
 	 * @param specificlistener A listener that listens to only this instance of 
 	 * the sound (null if no listener is needed)
 	 */
-	public void loop(float volume, float pan, SoundListener specificlistener)
+	public void loop(double volume, double pan, SoundListener specificlistener)
 	{
-		startsound(volume, pan, true);
+		startsound(this.defaultvolume + volume, pan, true);
 		informSoundStart(specificlistener);
 	}
 	
@@ -170,7 +160,7 @@ public class WavSound extends Sound
 	public void stopOldest()
 	{
 		// Stops the oldest wavplayer
-		this.players.getFirst().stopSound();
+		this.players.get(0).stopSound();
 		informSoundEnd();
 	}
 	
@@ -252,10 +242,10 @@ public class WavSound extends Sound
 		 * @param volume How much the volume is adjusted in desibels (default 0)
 		 * @param loops Should the sound be looped after it ends?
 		 */
-		public WavPlayer(float pan, float volume, boolean loops)
+		public WavPlayer(double pan, double volume, boolean loops)
 		{
-	        this.pan = pan;
-	        this.volume = volume;
+	        this.pan = (float) pan;
+	        this.volume = (float) volume;
 	        this.paused = false;
 	        this.looping = loops;
 	        this.stopped = false;
@@ -265,6 +255,10 @@ public class WavSound extends Sound
 	        	this.pan = -1;
 	        else if (this.pan > 1)
 	        	this.pan = 1;
+	        
+	        // Checks that the volume is within limits
+	        if (this.volume > 6)
+	        	this.volume = 6;
 	    }
 		
 		
@@ -345,12 +339,21 @@ public class WavSound extends Sound
 	            pancontrol.setValue(this.pan);
 	        }
 	        // Tries to set the correct volume (if needed)
-	        if (this.volume != 0 && auline.isControlSupported(FloatControl.Type.VOLUME))
-	        { 
-	            FloatControl volumecontrol = (FloatControl) auline.getControl(
-	            		FloatControl.Type.VOLUME);
-	            volumecontrol.setValue(this.volume);
-	        } 
+	        if (this.volume != 0)
+	        {
+		        if (auline.isControlSupported(FloatControl.Type.VOLUME))
+		        { 
+		            FloatControl volumecontrol = (FloatControl) auline.getControl(
+		            		FloatControl.Type.VOLUME);
+		            volumecontrol.setValue(this.volume);
+		        }
+		        else if (auline.isControlSupported(FloatControl.Type.MASTER_GAIN))
+		        {
+			        FloatControl volume = 
+			        		(FloatControl) auline.getControl(FloatControl.Type.MASTER_GAIN);
+			        volume.setValue(this.volume);
+		        }
+	        }
 	 
 	        // Plays the track
 	        auline.start();
