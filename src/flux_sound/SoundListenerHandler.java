@@ -117,15 +117,9 @@ public class SoundListenerHandler extends Handler<SoundListener> implements Soun
 		// IMPLEMENTED METHODS	-----------------
 
 		@Override
-		protected void changeHandledState(SoundListener s, boolean newState)
+		protected StateOperator getHandledStateOperator(SoundListener l)
 		{
-			s.getListensToSoundEventsOperator().setState(newState);
-		}
-
-		@Override
-		protected boolean getHandledState(SoundListener s)
-		{
-			return s.getListensToSoundEventsOperator().getState();
+			return l.getListensToSoundEventsOperator();
 		}
 	}
 }
