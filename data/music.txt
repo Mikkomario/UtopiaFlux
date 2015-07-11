@@ -1,0 +1,4 @@
+* This is a resource list of all the music used in the tests
+
+&test
+test#testMidi.mid

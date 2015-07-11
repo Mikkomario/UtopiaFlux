@@ -12,7 +12,7 @@ import genesis_event.MouseListener;
 import genesis_event.StrictEventSelector;
 import genesis_util.LatchStateOperator;
 import genesis_util.StateOperator;
-import genesis_util.Vector2D;
+import genesis_util.Vector3D;
 import genesis_video.GamePanel;
 import genesis_video.GameWindow;
 
@@ -46,7 +46,7 @@ public class WavSoundTest
 		ResourceActivator.startPhase(GamePhaseBank.getGamePhase("test"), true);
 		
 		// Sets up the window
-		Vector2D screenDimensions = new Vector2D(500, 400);
+		Vector3D screenDimensions = new Vector3D(500, 400);
 		GameWindow window = new GameWindow(screenDimensions, "Flux wav test", true, 
 				120, 20);
 		GamePanel panel = window.getMainPanel().addGamePanel();
@@ -65,7 +65,7 @@ public class WavSoundTest
 		
 		private StateOperator isDeadOperator, listensMouseOperator;
 		private EventSelector<MouseEvent> selector;
-		private Vector2D screenDimensions;
+		private Vector3D screenDimensions;
 		
 		
 		// CONSTRUCTOR	--------------------
@@ -75,7 +75,7 @@ public class WavSoundTest
 		 * @param screenDimensions The size of the screen
 		 * @param handlers The handlers that will handle this player
 		 */
-		public TestMusicPlayer(Vector2D screenDimensions, HandlerRelay handlers)
+		public TestMusicPlayer(Vector3D screenDimensions, HandlerRelay handlers)
 		{
 			this.isDeadOperator = new LatchStateOperator(false);
 			this.listensMouseOperator = new StateOperator(true, true);
@@ -112,7 +112,7 @@ public class WavSoundTest
 		}
 
 		@Override
-		public boolean isInAreaOfInterest(Vector2D position)
+		public boolean isInAreaOfInterest(Vector3D position)
 		{
 			return false;
 		}
@@ -121,7 +121,7 @@ public class WavSoundTest
 		public void onMouseEvent(MouseEvent event)
 		{
 			// Plays a wavSound with specific settings
-			Vector2D relativeCoordinates = 
+			Vector3D relativeCoordinates = 
 					event.getPosition().dividedBy(this.screenDimensions);
 			
 			double volume = 6 + (relativeCoordinates.getSecond()) * -60;

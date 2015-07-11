@@ -6,10 +6,12 @@ import java.io.IOException;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MetaEventListener;
 import javax.sound.midi.MetaMessage;
+import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
+import javax.sound.midi.Synthesizer;
 
 import flux_sound.Sound;
 import flux_sound.SoundListener;
@@ -24,29 +26,15 @@ import flux_sound.SoundListener;
  */
 public class MidiSound extends Sound implements MetaEventListener
 {
-	/* Volume control
-	 * 
-	Sequencer sequencer = MidiSystem.getSequencer();
-    sequencer.open();
-    if (sequencer instanceof Synthesizer) {
-      Synthesizer synthesizer = (Synthesizer) sequencer;
-      MidiChannel[] channels = synthesizer.getChannels();
-
-      // gain is a value between 0 and 1 (loudest)
-      double gain = 0.9D;
-      for (int i = 0; i < channels.length; i++) {
-        channels[i].controlChange(7, (int) (gain * 127.0));
-      }
-    }
-	 * 
-	 */
-	
 	// ATTRIBUTES ---------------------------------------------------------
 
 	private String fileName;
 	private Sequence midiSequence;
 	private Sequencer midiSequencer;
-	private long pauseposition;
+	private long pauseposition, nextLoopStart, nextLoopEnd;
+	private double defaultTempo, defaultGain, nextTempo, nextGain;
+	private int nextLoopCount;
+	private boolean paused;
 
 	
 	// CONSTRUCTOR ---------------------------------------------------------
@@ -63,34 +51,24 @@ public class MidiSound extends Sound implements MetaEventListener
 		super(name);
 		
 		// Initializes attributes
-		this.fileName = "data/" + fileName;
-		this.pauseposition = 0;
+		initialize(fileName, 1, 1);
+	}
+	
+	/**
+	 * Creates midiSound-object.
+	 * 
+	 * @param fileName Which midi file is used to play the music (data/ 
+	 * automatically included).
+	 * @param name The name of the midiSound (in the midiSoundbank)
+	 * @param defaultGain The gain that always affects the sound
+	 * @param defaultTempo The tempo factor that always affects the sound
+	 */
+	public MidiSound(String fileName, String name, double defaultGain, double defaultTempo)
+	{
+		super(name);
 		
-		// tries to create the midisequence
-		try
-		{
-			this.midiSequence = MidiSystem.getSequence(new File(this.fileName));
-		}
-		catch (InvalidMidiDataException e)
-		{
-			System.err.println("Couldn't find create a midisequence!");
-			e.printStackTrace();
-		}
-		catch (IOException e)
-		{
-			System.err.println("IOException whilst creating midisequence!");
-			e.printStackTrace();
-		}
-		// Now let's try and set-up our midiSequencer
-		try
-		{
-			this.midiSequencer = MidiSystem.getSequencer();
-		}
-		catch (MidiUnavailableException e)
-		{
-			System.err.println("Problems whilst setting up sequencer!");
-			e.printStackTrace();
-		} 
+		// Initializes attributes
+		initialize(fileName, defaultTempo, defaultGain);
 	}
 	
 	
@@ -100,20 +78,20 @@ public class MidiSound extends Sound implements MetaEventListener
 	protected void playSound()
 	{
 		// Plays the music once from the very beginning
-		setLoopCount(0);
-		setLoopStart(0);
-		setLoopEnd(-1);
 		startMusic(0);
+		setLoopCount(0);
+		//setLoopStart(0);
+		//setLoopEnd(-1);
 	}
 
 	@Override
 	protected void loopSound()
 	{
 		// Loops the music continuously
-		setLoopCount(-1);
-		setLoopStart(0);
-		setLoopEnd(-1);
 		startMusic(0);
+		setLoopCount(-1);
+		//setLoopStart(0);
+		//setLoopEnd(-1);
 	}
 
 	@Override
@@ -136,13 +114,14 @@ public class MidiSound extends Sound implements MetaEventListener
 		{
 			this.midiSequencer.stop();
 			this.pauseposition = this.midiSequencer.getTickPosition();
+			this.paused = true;
 		}
 	}
 
 	@Override
 	public void unpause()
 	{
-		if (!this.midiSequencer.isRunning()&&isPlaying())
+		if (!this.midiSequencer.isRunning() && isPlaying())
 		{
 			// Starts the music from the spot it was at
 			startMusic(this.pauseposition);
@@ -163,7 +142,15 @@ public class MidiSound extends Sound implements MetaEventListener
 	}
 	
 
-	// METHODS ---------------------------------------------------
+	// OTHER METHODS ---------------------------------------------------
+	
+	/**
+	 * @return Is the sound on a pause
+	 */
+	public boolean isPaused()
+	{
+		return this.paused;
+	}
 	
 	/**
 	 * Starts playing the music from the given position.
@@ -192,7 +179,7 @@ public class MidiSound extends Sound implements MetaEventListener
 	}
 
 	private void startMusic(long startPosition)
-	{
+	{	
 		// Adds the music as a listener to the sequencer
 		this.midiSequencer.addMetaEventListener(this);
 		
@@ -215,10 +202,29 @@ public class MidiSound extends Sound implements MetaEventListener
 			System.err.println("Midi" + getName() +  "was unavailable!");
 			mue.printStackTrace();
 		}
+		
+		// Changes the music stats according to previous changes
+		if (!isPaused())
+		{
+			setLoopStart(this.nextLoopStart);
+			setLoopEnd(this.nextLoopEnd);
+			setTempoFactor(this.nextTempo);
+			setLoopCount(this.nextLoopCount);
+			setGain(this.nextGain);
+			
+			this.nextLoopStart = 0;
+			this.nextLoopEnd = -1;
+			this.nextTempo = 1;
+			this.nextGain = 1;
+			this.nextLoopCount = 0;
+		}
+		else
+			this.paused = false;
+		
 		this.midiSequencer.setTickPosition(startPosition);
 		this.midiSequencer.start();
 	}
-
+	
 	/**
 	 * Sets how many times the music loops.
 	 * 
@@ -227,14 +233,21 @@ public class MidiSound extends Sound implements MetaEventListener
 	 */
 	public void setLoopCount(int loopCount)
 	{
-		if (loopCount < 0)
+		if (isPlaying())
 		{
-			this.midiSequencer.setLoopCount(Sequencer.LOOP_CONTINUOUSLY);
+			if (loopCount < 0)
+			{
+				System.out.println("Looping");
+				this.midiSequencer.setLoopCount(Sequencer.LOOP_CONTINUOUSLY);
+			}
+			else
+			{
+				System.out.println("Not looping");
+				this.midiSequencer.setLoopCount(loopCount);
+			}
 		}
 		else
-		{
-			this.midiSequencer.setLoopCount(loopCount);
-		}
+			this.nextLoopCount = loopCount;
 	}
 
 	/**
@@ -244,7 +257,10 @@ public class MidiSound extends Sound implements MetaEventListener
 	 */
 	public void setLoopStart(long loopStartPoint)
 	{
-		this.midiSequencer.setLoopStartPoint(loopStartPoint);
+		if (isPlaying())
+			this.midiSequencer.setLoopStartPoint(loopStartPoint);
+		else
+			this.nextLoopStart = loopStartPoint;
 	}
 
 	/**
@@ -255,7 +271,10 @@ public class MidiSound extends Sound implements MetaEventListener
 	 */
 	public void setLoopEnd(long loopEndPoint)
 	{
-		this.midiSequencer.setLoopEndPoint(loopEndPoint);
+		if (isPlaying())
+			this.midiSequencer.setLoopEndPoint(loopEndPoint);
+		else
+			this.nextLoopEnd = loopEndPoint;
 	}
 	
 	/**
@@ -263,8 +282,8 @@ public class MidiSound extends Sound implements MetaEventListener
 	 */
 	public void setDefaultLoopPoints()
 	{
-		this.midiSequencer.setLoopStartPoint(0);
-		this.midiSequencer.setLoopEndPoint(this.getSequenceLength());
+		setLoopStart(0);
+		setLoopEnd(-1);
 	}
 	
 	/**
@@ -272,9 +291,12 @@ public class MidiSound extends Sound implements MetaEventListener
 	 * 
 	 * @param newTempoFactor New tempoFactor for the midi (0+) (1.0 by default)
 	 */
-	public void setTempoFactor (float newTempoFactor)
+	public void setTempoFactor (double newTempoFactor)
 	{
-		this.midiSequencer.setTempoFactor(newTempoFactor);
+		if (isPlaying())
+			this.midiSequencer.setTempoFactor((float) (newTempoFactor * this.defaultTempo));
+		else
+			this.nextTempo = newTempoFactor;
 	}
 	
 	/**
@@ -282,7 +304,7 @@ public class MidiSound extends Sound implements MetaEventListener
 	 */
 	public void resetTempoFactor()
 	{
-		this.midiSequencer.setTempoFactor(1);
+		setTempoFactor(1);
 	}
 	
 	/**
@@ -290,8 +312,88 @@ public class MidiSound extends Sound implements MetaEventListener
 	 * 
 	 * @return	Returns the current TempoFactor as a float.
 	 */
-	public float getTempoFactor()
+	public double getTempoFactor()
 	{
-		return this.midiSequencer.getTempoFactor();
+		return this.midiSequencer.getTempoFactor() / this.defaultTempo;
+	}
+	
+	/**
+	 * Changes the gain of the sound, which affects the volume. Unfortunately this feature 
+	 * simply doesn't work. I've tried everything.
+	 * @param newGain The new gain of the sound [0, 1]
+	 */
+	public void setGain(double newGain)
+	{
+		if (isPlaying())
+		{
+			Synthesizer synthesizer = null;
+			
+			// Volume control 
+			if (this.midiSequencer instanceof Synthesizer)
+				synthesizer =  (Synthesizer) this.midiSequencer;
+			else
+			{
+				try
+				{
+					synthesizer = MidiSystem.getSynthesizer();
+					synthesizer.open();
+				}
+				catch (MidiUnavailableException e)
+				{
+					System.err.println("Midi unavailable");
+					e.printStackTrace();
+				}
+			}
+			
+			MidiChannel[] channels = synthesizer.getChannels();
+
+			// gain is a value between 0 and 1 (loudest)
+			for (int i = 0; i < channels.length; i++)
+			{
+				channels[i].controlChange(7, (int) (newGain * this.defaultGain * 127.0));
+			}
+		}
+		else
+			this.nextGain = newGain;
+	}
+	
+	private void initialize(String fileName, double tempo, double gain)
+	{
+		// Initializes attributes
+		this.fileName = "data/" + fileName;
+		this.pauseposition = 0;
+		this.defaultTempo = tempo;
+		this.defaultGain = gain;
+		this.nextLoopStart = 0;
+		this.nextLoopEnd = -1;
+		this.nextTempo = 1;
+		this.nextGain = 1;
+		this.paused = false;
+		
+		// tries to create the midisequence
+		try
+		{
+			this.midiSequence = MidiSystem.getSequence(new File(this.fileName));
+		}
+		catch (InvalidMidiDataException e)
+		{
+			System.err.println("Couldn't find create a midisequence!");
+			e.printStackTrace();
+		}
+		catch (IOException e)
+		{
+			System.err.println("IOException whilst creating midisequence!");
+			e.printStackTrace();
+		}
+		// Now let's try and set-up our midiSequencer
+		try
+		{
+			this.midiSequencer = MidiSystem.getSequencer();
+		}
+		catch (MidiUnavailableException e)
+		{
+			System.err.println("Problems whilst setting up sequencer!");
+			e.printStackTrace();
+		}
 	}
 }

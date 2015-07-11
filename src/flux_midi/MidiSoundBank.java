@@ -31,7 +31,7 @@ public class MidiSoundBank
 	 * @param fileName The name of the file that contains midiSound data ("data/" automatically 
 	 * included). The file should have the following format:<br>
 	 * &bankName1<br>
-	 * soundName1#fileName<br>
+	 * soundName1#fileName#default tempo (optional)#default gain (optional)<br>
 	 * soundName2#...<br>
 	 * ...<br>
 	 * &bankName2<br>
@@ -47,7 +47,7 @@ public class MidiSoundBank
 	 * @param fileName The name of the file that contains midiSound data ("data/" automatically 
 	 * included). The file should have the following format:<br>
 	 * &bankName1<br>
-	 * soundName1#fileName<br>
+	 * soundName1#fileName#default tempo (optional)#default gain (optional)<br>
 	 * soundName2#...<br>
 	 * ...<br>
 	 * &bankName2<br>
@@ -105,14 +105,32 @@ public class MidiSoundBank
 		@Override
 		public MidiSound construct(String line, Bank<MidiSound> bank)
 		{
-			// The line has the following format: soundName#fileName
+			// The line has the following format: soundName#fileName#
+			// defaultTempo (optional)#defaultGain (optional)
 			String[] arguments = line.split("#");
 			
 			if (arguments.length < 2)
 				throw new ResourceInitializationException("Can't construct a midiSound from " + 
 						line);
 			
-			MidiSound newSound = new MidiSound(arguments[1], arguments[0]);
+			double gain = 1;
+			double tempo = 1;
+			if (arguments.length > 2)
+			{
+				try
+				{
+					tempo = Double.parseDouble(arguments[2]);
+					if (arguments.length > 3)
+						gain = Double.parseDouble(arguments[3]);
+				}
+				catch (NumberFormatException e)
+				{
+					throw new ResourceInitializationException(
+							"Failed to parse arguments in line: " + line);
+				}
+			}
+			
+			MidiSound newSound = new MidiSound(arguments[1], arguments[0], gain, tempo);
 			bank.put(arguments[0], newSound);
 			
 			return newSound;
